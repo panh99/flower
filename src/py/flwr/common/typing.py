@@ -15,7 +15,7 @@
 """Flower type definitions."""
 
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -161,3 +161,12 @@ class ClientMessage:
     get_parameters_res: Optional[GetParametersRes] = None
     fit_res: Optional[FitRes] = None
     evaluate_res: Optional[EvaluateRes] = None
+
+
+@dataclass
+class SecAggMessage:
+    """SecAggMessage is a container used to store Secure Aggregation-related messages."""
+
+    named_arrays: Dict[str, Union[NDArray, NDArrays]] = field(default_factory=dict)
+    named_bytes: Dict[str, Union[bytes, List[bytes]]] = field(default_factory=dict)
+    named_scalars: Dict[str, Union[Scalar, List[Scalar]]] = field(default_factory=dict)

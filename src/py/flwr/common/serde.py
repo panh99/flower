@@ -17,6 +17,7 @@
 
 from typing import Any, List, cast
 
+from flwr.proto.task_pb2 import SecAggMsg
 from flwr.proto.transport_pb2 import (
     ClientMessage,
     Code,
@@ -27,7 +28,7 @@ from flwr.proto.transport_pb2 import (
     Status,
 )
 
-from . import typing
+from . import typing, parameter
 
 #  === ServerMessage message ===
 
@@ -484,3 +485,56 @@ def scalar_from_proto(scalar_msg: Scalar) -> typing.Scalar:
     scalar_field = scalar_msg.WhichOneof("scalar")
     scalar = getattr(scalar_msg, cast(str, scalar_field))
     return cast(typing.Scalar, scalar)
+
+
+# === SecAgg messages ===
+
+
+def secagg_msg_to_proto(secagg_msg: typing.SecAggMessage) -> SecAggMsg:
+    named_arrays = {}
+    for name, value in secagg_msg.named_arrays.items():
+        if isinstance(value, list):
+            value = [parameter.ndarray_to_bytes(o) for o in value]
+            value = SecAggMsg.Arrays(plural=SecAggMsg.Arrays.Plural(value=value))
+        else:
+            value = parameter.ndarray_to_bytes(value)
+            value = SecAggMsg.Arrays(singular=value)
+        named_arrays[name] = value
+    
+    named_bytes = {}
+    for name, value in secagg_msg.named_bytes.items():
+        if isinstance(value, list):
+            value = SecAggMsg.Bytes(plural=SecAggMsg.Bytes.Plural(value=value))
+        else:
+            value = SecAggMsg.Bytes(singular=value)
+        named_bytes[name] = value
+
+    named_scalars = {}
+    for name, value in secagg_msg.named_scalars.items():
+        if isinstance(value, list):
+            value = [scalar_to_proto(o) for o in value]
+            value = SecAggMsg.Scalars(plural=SecAggMsg.Scalars.Plural(value=value))
+        else:
+            value = scalar_to_proto(value)
+            value = SecAggMsg.Scalars(singular=value)
+        named_scalars[name] = value
+
+    return SecAggMsg(named_arrays=named_arrays, 
+                     named_bytes=named_bytes, 
+                     named_scalars=named_scalars)
+    
+
+def secagg_msg_from_proto(secagg_msg: SecAggMsg) -> typing.SecAggMessage:
+    ret = typing.SecAggMessage()
+    for name, value in secagg_msg.named_arrays.items():
+        is_plural = value.WhichOneof("value") == "plural"
+        ret.named_arrays[name] = [parameter.bytes_to_ndarray(o) for o in value.plural.value] if is_plural else parameter.bytes_to_ndarray(value.singular)
+    for name, value in secagg_msg.named_bytes.items():
+        is_plural = value.WhichOneof("value") == "plural"
+        ret.named_bytes[name] = list(value.plural.value) if is_plural else value.singular
+    for name, value in secagg_msg.named_scalars.items():
+        is_plural = value.WhichOneof("value") == "plural"
+        ret.named_scalars[name] = [scalar_from_proto(o) for o in value.plural.value] if is_plural else scalar_from_proto(value.singular)
+    return ret
+    
+    
