@@ -490,7 +490,7 @@ def scalar_from_proto(scalar_msg: Scalar) -> typing.Scalar:
 # === SecAgg messages ===
 
 
-def secagg_msg_to_proto(secagg_msg: typing.SecAggMessage) -> SecAggMsg:
+def secagg_msg_to_proto(secagg_msg: typing.SecureAggregationMessage) -> SecAggMsg:
     named_arrays = {}
     for name, value in secagg_msg.named_arrays.items():
         if isinstance(value, list):
@@ -524,8 +524,8 @@ def secagg_msg_to_proto(secagg_msg: typing.SecAggMessage) -> SecAggMsg:
                      named_scalars=named_scalars)
     
 
-def secagg_msg_from_proto(secagg_msg: SecAggMsg) -> typing.SecAggMessage:
-    ret = typing.SecAggMessage()
+def secagg_msg_from_proto(secagg_msg: SecAggMsg) -> typing.SecureAggregationMessage:
+    ret = typing.SecureAggregationMessage()
     for name, value in secagg_msg.named_arrays.items():
         is_plural = value.WhichOneof("value") == "plural"
         ret.named_arrays[name] = [parameter.bytes_to_ndarray(o) for o in value.plural.value] if is_plural else parameter.bytes_to_ndarray(value.singular)

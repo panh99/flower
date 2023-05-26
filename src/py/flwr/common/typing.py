@@ -164,7 +164,7 @@ class ClientMessage:
 
 
 @dataclass
-class SecAggMessage:
+class SecureAggregationMessage:
     """SecAggMessage is a container used to store Secure Aggregation-related messages."""
 
     named_arrays: Dict[str, Union[NDArray, NDArrays]] = field(default_factory=dict)
