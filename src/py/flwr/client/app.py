@@ -53,7 +53,7 @@ from flwr.common.typing import (
 from .client import Client
 from .grpc_client.connection import grpc_connection
 from .grpc_rere_client.connection import grpc_request_response
-from .message_handler.message_handler import handle
+from .message_handler.message_handler import handle, handle_task
 from .numpy_client import NumPyClient
 from .numpy_client import has_evaluate as numpyclient_has_evaluate
 from .numpy_client import has_fit as numpyclient_has_fit
@@ -184,37 +184,69 @@ def start_client(
         raise ValueError(
             f"Unknown transport type: {transport} (possible: {TRANSPORT_TYPES})"
         )
+    
+    if transport == TRANSPORT_TYPE_GRPC_RERE:
+        while True:
+            sleep_duration: int = 0
+            with connection(
+                address,
+                max_message_length=grpc_max_message_length,
+                root_certificates=root_certificates,
+            ) as conn:
+                receive, send = conn
 
-    while True:
-        sleep_duration: int = 0
-        with connection(
-            address,
-            max_message_length=grpc_max_message_length,
-            root_certificates=root_certificates,
-        ) as conn:
-            receive, send = conn
+                while True:
+                    received_task = receive()
+                    if received_task is None:
+                        time.sleep(3)  # Wait for 3s before asking again
+                        continue
+                    replied_task, sleep_duration, keep_going = handle_task(
+                        client, received_task
+                    )
+                    send(replied_task)
+                    if not keep_going:
+                        break
+            if sleep_duration == 0:
+                log(INFO, "Disconnect and shut down")
+                break
+            # Sleep and reconnect afterwards
+            log(
+                INFO,
+                "Disconnect, then re-establish connection after %s second(s)",
+                sleep_duration,
+            )
+            time.sleep(sleep_duration)
+    else:
+        while True:
+            sleep_duration: int = 0
+            with connection(
+                address,
+                max_message_length=grpc_max_message_length,
+                root_certificates=root_certificates,
+            ) as conn:
+                receive, send = conn
 
-            while True:
-                server_message = receive()
-                if server_message is None:
-                    time.sleep(3)  # Wait for 3s before asking again
-                    continue
-                client_message, sleep_duration, keep_going = handle(
-                    client, server_message
-                )
-                send(client_message)
-                if not keep_going:
-                    break
-        if sleep_duration == 0:
-            log(INFO, "Disconnect and shut down")
-            break
-        # Sleep and reconnect afterwards
-        log(
-            INFO,
-            "Disconnect, then re-establish connection after %s second(s)",
-            sleep_duration,
-        )
-        time.sleep(sleep_duration)
+                while True:
+                    server_message = receive()
+                    if server_message is None:
+                        time.sleep(3)  # Wait for 3s before asking again
+                        continue
+                    client_message, sleep_duration, keep_going = handle(
+                        client, server_message
+                    )
+                    send(client_message)
+                    if not keep_going:
+                        break
+            if sleep_duration == 0:
+                log(INFO, "Disconnect and shut down")
+                break
+            # Sleep and reconnect afterwards
+            log(
+                INFO,
+                "Disconnect, then re-establish connection after %s second(s)",
+                sleep_duration,
+            )
+            time.sleep(sleep_duration)
 
     event(EventType.START_CLIENT_LEAVE)
 

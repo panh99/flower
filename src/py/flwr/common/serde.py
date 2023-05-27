@@ -17,7 +17,7 @@
 
 from typing import Any, List, cast
 
-from flwr.proto.task_pb2 import SecAggMsg
+from flwr.proto.task_pb2 import SecAggMsg, Task
 from flwr.proto.transport_pb2 import (
     ClientMessage,
     Code,
@@ -538,3 +538,22 @@ def secagg_msg_from_proto(secagg_msg: SecAggMsg) -> typing.SecureAggregationMess
     return ret
     
     
+# === Task messages ===
+
+
+def task_msg_to_proto(task: typing.Task) -> Task:
+    proto = Task(
+        sec_agg=secagg_msg_to_proto(task.secure_aggregation_message) if task.secure_aggregation_message else None,
+        legacy_server_message=server_message_to_proto(task.legacy_server_message) if task.legacy_server_message else None,
+        legacy_client_message=client_message_to_proto(task.legacy_client_message) if task.legacy_client_message else None,
+    )
+    return proto
+
+
+def task_msg_from_proto(proto: Task) -> typing.Task:
+    task = typing.Task(
+        secure_aggregation_message=secagg_msg_from_proto(proto.sec_agg) if proto.HasField("sec_agg") else None,
+        legacy_server_message=server_message_from_proto(proto.legacy_server_message) if proto.HasField("legacy_server_message") else None,
+        legacy_client_message=client_message_from_proto(proto.legacy_client_message) if proto.HasField("legacy_client_message") else None,   
+    )
+    return task

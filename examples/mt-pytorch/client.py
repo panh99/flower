@@ -1,6 +1,7 @@
 from typing import Dict
 import flwr as fl
 from flwr.common import NDArrays, Scalar
+from flwr.common.typing import Task
 
 from task import (
     Net,
@@ -32,11 +33,16 @@ class FlowerClient(fl.client.NumPyClient):
         set_parameters(net, parameters)
         loss, accuracy = test(net, testloader)
         return loss, len(testloader.dataset), {"accuracy": accuracy}
+    
+    def handle_secagg(self, task: Task) -> Task:
+        print("Handling secagg")
+        print(task)
+        return Task()
 
 
 # Start Flower client
 fl.client.start_numpy_client(
     server_address="0.0.0.0:9092",
     client=FlowerClient(),
-    transport="grpc-bidi",
+    transport="grpc-rere",
 )

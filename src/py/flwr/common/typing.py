@@ -170,3 +170,11 @@ class SecureAggregationMessage:
     named_arrays: Dict[str, Union[NDArray, NDArrays]] = field(default_factory=dict)
     named_bytes: Dict[str, Union[bytes, List[bytes]]] = field(default_factory=dict)
     named_scalars: Dict[str, Union[Scalar, List[Scalar]]] = field(default_factory=dict)
+
+
+@dataclass
+class Task:
+    """Task is a container used to hold all messages."""
+    secure_aggregation_message: Optional[SecureAggregationMessage] = None
+    legacy_server_message: Optional[ServerMessage] = None
+    legacy_client_message: Optional[ClientMessage] = None
